@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Object Detection with Webcam</title>
+    <style>
+        /* Add your CSS styles here */
+    </style>
+</head>
+<body>
+    <input type="file" id="fileInput" accept="image/*">
+    <video id="video" width="640" height="480" autoplay></video>
+    <canvas id="canvas" width="640" height="480"></canvas>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script>// script.js
+
+const fileInput = document.getElementById('fileInput');
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const context = canvas.getContext('2d');
+let model;
+
+async function loadModel() {
+    model = await cocoSsd.load(); // Load the COCO-SSD model (pre-trained on COCO dataset)
+}
+
+async function startVideo() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+    } catch (error) {
+        console.error('Error accessing webcam:', error);
+    }
+}
+
+async function detectObjects(imageData) {
+    const predictions = await model.detect(imageData);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    for (const prediction of predictions) {
+        const [x, y, width, height] = prediction.bbox;
+        const label = `${prediction.class} (${Math.round(prediction.score * 100)}%)`;
+        context.beginPath();
+        context.rect(x, y, width, height);
+        context.lineWidth = 2;
+        context.strokeStyle = 'red';
+        context.fillStyle = 'red';
+        context.stroke();
+        context.fillText(label, x, y > 10 ? y - 5 : 10);
+    }
+}
+
+fileInput.addEventListener('change', async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+        const image = new Image();
+        image.src = URL.createObjectURL(file);
+        image.onload = async () => {
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const imageData = new ImageData(canvas.width, canvas.height);
+            detectObjects(imageData);
+        };
+    }
+});
+
+loadModel();
+startVideo();
+</script>
+</body>
+</html>
